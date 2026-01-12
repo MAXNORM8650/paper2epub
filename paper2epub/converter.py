@@ -2,15 +2,15 @@
 Core converter module using Nougat for academic PDF processing
 """
 
-import os
-import tempfile
-from pathlib import Path
-from typing import Optional, Union
+import gc
 import logging
+from pathlib import Path
+from typing import List, Optional, Tuple, Union
 
-from ebooklib import epub
-from PIL import Image
 import torch
+from ebooklib import epub
+
+from paper2epub.figure_extractor import FigureExtractor, FigureMatcher
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,8 @@ class Paper2EpubConverter:
         model_tag: str = "0.1.0-small",
         device: Optional[str] = None,
         batch_size: int = 1,
+        extract_figures: bool = True,
+        figure_min_size: int = 100,
     ):
         """
         Initialize the converter.
@@ -34,9 +36,12 @@ class Paper2EpubConverter:
             model_tag: Nougat model version ('0.1.0-small', '0.1.0-base')
             device: Device to run on ('cuda', 'mps', 'cpu', or None for auto-detect)
             batch_size: Batch size for processing pages
+            extract_figures: Whether to extract figures from PDF
+            figure_min_size: Minimum figure size in pixels to extract
         """
         self.model_tag = model_tag
         self.batch_size = batch_size
+        self.extract_figures = extract_figures
 
         # Auto-detect device if not specified
         if device is None:
@@ -49,8 +54,28 @@ class Paper2EpubConverter:
         else:
             self.device = device
 
+        # Initialize figure extraction components
+        self.figure_extractor = None
+        self.figure_matcher = None
+        if extract_figures:
+            self.figure_extractor = FigureExtractor(
+                min_width=figure_min_size,
+                min_height=figure_min_size,
+            )
+            self.figure_matcher = FigureMatcher()
+
+        # Lazy model loading
+        self._model = None
+        self._model_loaded = False
+
         logger.info(f"Initializing Paper2Epub converter with device: {self.device}")
-        self._load_model()
+
+    @property
+    def model(self):
+        """Lazy load model on first access."""
+        if not self._model_loaded:
+            self._load_model()
+        return self._model
 
     def _load_model(self):
         """Load Nougat model lazily."""
@@ -59,9 +84,10 @@ class Paper2EpubConverter:
             from nougat.utils.checkpoint import get_checkpoint
 
             checkpoint = get_checkpoint(None, model_tag=self.model_tag)
-            self.model = NougatModel.from_pretrained(checkpoint)
-            self.model = self.model.to(self.device)
-            self.model.eval()
+            self._model = NougatModel.from_pretrained(checkpoint)
+            self._model = self._model.to(self.device)
+            self._model.eval()
+            self._model_loaded = True
             logger.info(f"Nougat model '{self.model_tag}' loaded successfully")
         except ImportError as e:
             logger.error("Nougat not installed. Run: pip install nougat-ocr")
@@ -71,6 +97,18 @@ class Paper2EpubConverter:
         except Exception as e:
             logger.error(f"Failed to load Nougat model: {e}")
             raise
+
+    def _cleanup_memory(self):
+        """Free GPU/CPU memory after processing."""
+        if self._model is not None:
+            del self._model
+            self._model = None
+            self._model_loaded = False
+
+        if self.device == "cuda":
+            torch.cuda.empty_cache()
+
+        gc.collect()
 
     def extract_pdf_to_markdown(self, pdf_path: Union[str, Path]) -> str:
         """
@@ -84,7 +122,6 @@ class Paper2EpubConverter:
         """
         from nougat.utils.dataset import LazyDataset
         from nougat.postprocessing import markdown_compatible
-        from nougat.dataset.rasterize import rasterize_paper
 
         pdf_path = Path(pdf_path)
         if not pdf_path.exists():
@@ -94,9 +131,10 @@ class Paper2EpubConverter:
 
         try:
             # Create dataset with the correct API
+            # prepare should be the encoder's prepare_input function, not rasterize_paper
             dataset = LazyDataset(
                 str(pdf_path),
-                prepare=rasterize_paper,
+                prepare=self.model.encoder.prepare_input,
             )
 
             # Process PDF page by page
@@ -105,37 +143,28 @@ class Paper2EpubConverter:
             # Process each page individually to avoid batching issues
             for idx in range(len(dataset)):
                 try:
-                    image, _ = dataset[idx]
+                    image_tensor, _ = dataset[idx]
 
-                    if image is None:
+                    if image_tensor is None:
                         logger.warning(f"Skipping page {idx + 1} (failed to render)")
                         continue
 
-                    # Debug: Log what we actually received
-                    logger.debug(f"Page {idx + 1} - Image type: {type(image)}")
+                    # image_tensor is already prepared by encoder.prepare_input
+                    # Add batch dimension if needed
+                    if image_tensor.dim() == 3:
+                        image_tensor = image_tensor.unsqueeze(0)
 
-                    # Handle case where rasterize_paper returns list of images
-                    if isinstance(image, (list, tuple)):
-                        logger.debug(f"Page {idx + 1} - Got list/tuple with {len(image)} items")
-                        if len(image) == 0:
-                            logger.warning(f"Skipping page {idx + 1} (empty image list)")
-                            continue
-                        # Extract first image
-                        image = image[0]
-                        logger.debug(f"Page {idx + 1} - Extracted image type: {type(image)}")
-
-                    # Nougat's inference can accept PIL images directly
-                    # So we pass it as-is without tensor conversion
                     with torch.no_grad():
                         outputs = self.model.inference(
-                            image=image,  # Pass PIL image directly
+                            image_tensors=image_tensor,
                             return_attentions=False,
                         )
 
-                    for output in outputs:
-                        # Post-process markdown
-                        markdown = markdown_compatible(output)
-                        markdown_content.append(markdown)
+                    # Extract predictions from output
+                    for pred in outputs.get("predictions", []):
+                        if pred:
+                            markdown = markdown_compatible(pred)
+                            markdown_content.append(markdown)
 
                     logger.info(f"Processed page {idx + 1}/{len(dataset)}")
 
@@ -162,6 +191,7 @@ class Paper2EpubConverter:
         title: str = "Academic Paper",
         author: str = "Unknown",
         language: str = "en",
+        images: Optional[List[Tuple[str, bytes]]] = None,
     ):
         """
         Convert markdown content to EPUB format.
@@ -172,6 +202,7 @@ class Paper2EpubConverter:
             title: Book title
             author: Author name
             language: Language code
+            images: Optional list of (filename, bytes) tuples for embedded images
         """
         import markdown
         from markdown.extensions import tables, fenced_code, codehilite
@@ -275,6 +306,26 @@ class Paper2EpubConverter:
         """
         book.add_item(chapter)
 
+        # Add images to EPUB
+        if images:
+            for filename, image_bytes in images:
+                # Determine media type
+                if filename.lower().endswith(".png"):
+                    media_type = "image/png"
+                elif filename.lower().endswith((".jpg", ".jpeg")):
+                    media_type = "image/jpeg"
+                else:
+                    media_type = "image/png"  # Default to PNG
+
+                image_item = epub.EpubItem(
+                    uid=f"image_{filename.replace('.', '_')}",
+                    file_name=f"images/{filename}",
+                    media_type=media_type,
+                    content=image_bytes,
+                )
+                book.add_item(image_item)
+            logger.info(f"Added {len(images)} images to EPUB")
+
         # Create table of contents
         book.toc = (chapter,)
         book.spine = ["nav", chapter]
@@ -327,19 +378,35 @@ class Paper2EpubConverter:
         # Step 1: Extract PDF to Markdown
         markdown_content = self.extract_pdf_to_markdown(pdf_path)
 
+        # Step 2: Extract and integrate figures
+        images: List[Tuple[str, bytes]] = []
+        if self.extract_figures:
+            try:
+                extracted_images = self.figure_extractor.extract_images(pdf_path)
+                if extracted_images:
+                    markdown_content, images = (
+                        self.figure_matcher.insert_images_into_markdown(
+                            markdown_content, extracted_images
+                        )
+                    )
+                    logger.info(f"Integrated {len(images)} figures into document")
+            except Exception as e:
+                logger.warning(f"Figure extraction failed, continuing without figures: {e}")
+
         # Optionally save markdown
         if save_markdown:
             markdown_path = pdf_path.with_suffix(".md")
             markdown_path.write_text(markdown_content, encoding="utf-8")
             logger.info(f"Saved markdown: {markdown_path}")
 
-        # Step 2: Convert Markdown to EPUB
+        # Step 3: Convert Markdown to EPUB
         self.markdown_to_epub(
             markdown_content=markdown_content,
             output_path=output_path,
             title=title,
             author=author,
             language=language,
+            images=images,
         )
 
         logger.info(f"Conversion complete: {output_path}")

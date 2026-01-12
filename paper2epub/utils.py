@@ -9,6 +9,37 @@ from typing import Optional, Union
 logger = logging.getLogger(__name__)
 
 
+# Custom Exceptions
+class Paper2EpubError(Exception):
+    """Base exception for paper2epub."""
+
+    pass
+
+
+class PDFExtractionError(Paper2EpubError):
+    """Error during PDF content extraction."""
+
+    pass
+
+
+class FigureExtractionError(Paper2EpubError):
+    """Error during figure extraction."""
+
+    pass
+
+
+class EPUBCreationError(Paper2EpubError):
+    """Error during EPUB creation."""
+
+    pass
+
+
+class ModelLoadError(Paper2EpubError):
+    """Error loading Nougat model."""
+
+    pass
+
+
 def validate_pdf(pdf_path: Union[str, Path]) -> Path:
     """
     Validate that a PDF file exists and is readable.
@@ -25,11 +56,12 @@ def validate_pdf(pdf_path: Union[str, Path]) -> Path:
     """
     pdf_path = Path(pdf_path)
 
-    if not pdf_path.exists():
-        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
-
+    # Check extension first before checking existence
     if pdf_path.suffix.lower() != ".pdf":
         raise ValueError(f"File is not a PDF: {pdf_path}")
+
+    if not pdf_path.exists():
+        raise FileNotFoundError(f"PDF file not found: {pdf_path}")
 
     return pdf_path
 

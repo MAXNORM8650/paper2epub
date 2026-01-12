@@ -12,20 +12,18 @@ from paper2epub.converter import Paper2EpubConverter
 class TestPaper2EpubConverter:
     """Test suite for Paper2EpubConverter"""
 
-    @patch("paper2epub.converter.NougatModel")
-    def test_init_auto_device(self, mock_model):
+    def test_init_auto_device(self):
         """Test automatic device detection"""
+        # NougatModel is lazy loaded, so no mock needed for init
         converter = Paper2EpubConverter(device=None)
         assert converter.device in ["cuda", "mps", "cpu"]
 
-    @patch("paper2epub.converter.NougatModel")
-    def test_init_specific_device(self, mock_model):
+    def test_init_specific_device(self):
         """Test manual device specification"""
         converter = Paper2EpubConverter(device="cpu")
         assert converter.device == "cpu"
 
-    @patch("paper2epub.converter.NougatModel")
-    def test_model_tag(self, mock_model):
+    def test_model_tag(self):
         """Test model tag configuration"""
         converter = Paper2EpubConverter(model_tag="0.1.0-base")
         assert converter.model_tag == "0.1.0-base"

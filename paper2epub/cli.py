@@ -77,6 +77,17 @@ def setup_logging(verbose: bool = False):
     help="Save intermediate markdown file",
 )
 @click.option(
+    "--no-figures",
+    is_flag=True,
+    help="Skip figure extraction from PDF",
+)
+@click.option(
+    "--figure-min-size",
+    type=int,
+    default=100,
+    help="Minimum figure size in pixels (default: 100)",
+)
+@click.option(
     "-v",
     "--verbose",
     is_flag=True,
@@ -93,6 +104,8 @@ def main(
     device: str,
     batch_size: int,
     save_markdown: bool,
+    no_figures: bool,
+    figure_min_size: int,
     verbose: bool,
 ):
     """
@@ -138,6 +151,8 @@ def main(
             model_tag=model_tag,
             device=device_arg,
             batch_size=batch_size,
+            extract_figures=not no_figures,
+            figure_min_size=figure_min_size,
         )
 
         # Convert

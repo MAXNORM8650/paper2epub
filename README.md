@@ -8,6 +8,7 @@ A powerful academic PDF to EPUB converter with AI-powered layout detection and L
 - **LaTeX Math Support**: Preserves mathematical equations using Nougat's neural OCR
 - **Complex Layout Handling**: AI-powered detection of multi-column layouts, tables, and figures
 - **GPU Acceleration**: Optional CUDA/MPS (Apple Silicon) support for faster processing
+- **Figure Extraction**: Automatic extraction and embedding of figures using PyMuPDF
 - **Multiple Output Formats**: EPUB3 with optional intermediate Markdown
 - **Easy to Use**: Both CLI and Python API available
 
@@ -22,7 +23,7 @@ pip install paper2epub
 ### From Source
 
 ```bash
-git clone https://github.com/yourusername/paper2epub.git
+git clone https://github.com/MAXNORM8650/paper2epub.git
 cd paper2epub
 pip install -e .
 ```
@@ -57,6 +58,12 @@ paper2epub paper.pdf -m base -d cuda
 
 # Save intermediate markdown
 paper2epub paper.pdf --save-markdown
+
+# Skip figure extraction
+paper2epub paper.pdf --no-figures
+
+# Set minimum figure size (filter small images)
+paper2epub paper.pdf --figure-min-size 150
 ```
 
 ### Python API
@@ -68,6 +75,8 @@ from paper2epub import Paper2EpubConverter
 converter = Paper2EpubConverter(
     model_tag="0.1.0-small",  # or "0.1.0-base" for better quality
     device="auto",             # auto-detect GPU/CPU
+    extract_figures=True,      # enable figure extraction
+    figure_min_size=100,       # minimum figure size in pixels
 )
 
 # Convert PDF to EPUB
@@ -95,6 +104,8 @@ Options:
   -d, --device [auto|cuda|mps|cpu]  Device to use
   -b, --batch-size INT       Batch size for processing
   --save-markdown            Save intermediate markdown file
+  --no-figures               Skip figure extraction from PDF
+  --figure-min-size INT      Minimum figure size in pixels (default: 100)
   -v, --verbose              Enable verbose logging
   --version                  Show version
   --help                     Show this message and exit
@@ -105,8 +116,9 @@ Options:
 paper2epub uses a multi-stage pipeline:
 
 1. **PDF Extraction**: Nougat (Meta's neural OCR) extracts text, tables, and LaTeX equations
-2. **Markdown Generation**: Content is converted to Markdown with preserved structure
-3. **EPUB Creation**: Markdown is transformed into EPUB3 with MathML/MathJax support
+2. **Figure Extraction**: PyMuPDF extracts embedded images from the PDF
+3. **Markdown Generation**: Content is converted to Markdown with preserved structure
+4. **EPUB Creation**: Markdown and images are transformed into EPUB3 with MathML/MathJax support
 
 ### Why Nougat?
 
@@ -230,9 +242,9 @@ If you use paper2epub in academic work, please cite:
 ```bibtex
 @software{paper2epub,
   title = {paper2epub: Academic PDF to EPUB Converter},
-  author = {Your Name},
+  author = {Komal Kumar},
   year = {2026},
-  url = {https://github.com/yourusername/paper2epub}
+  url = {https://github.com/MAXNORM8650/paper2epub}
 }
 ```
 
@@ -248,8 +260,8 @@ For Nougat:
 
 ## Support
 
-- Issues: [GitHub Issues](https://github.com/yourusername/paper2epub/issues)
-- Discussions: [GitHub Discussions](https://github.com/yourusername/paper2epub/discussions)
+- Issues: [GitHub Issues](https://github.com/MAXNORM8650/paper2epub/issues)
+- Discussions: [GitHub Discussions](https://github.com/MAXNORM8650/paper2epub/discussions)
 
 ## Roadmap
 

@@ -4,21 +4,25 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "paper2epub"
-version = "0.1.0"
+version = "0.2.0"
 description = "A powerful academic PDF to EPUB converter with AI-powered layout detection and LaTeX math support"
 readme = "README.md"
-requires-python = ">=3.9"
+requires-python = ">=3.8"
 license = {text = "MIT"}
 authors = [
-    {name = "Your Name", email = "your.email@example.com"}
+    {name = "Komal Kumar", email = "suryavansi8650@gmail.com"}
+]
+maintainers = [
+    {name = "Komal Kumar", email = "suryavansi8650@gmail.com"}
 ]
 keywords = ["pdf", "epub", "converter", "academic", "scientific", "latex", "nougat"]
 classifiers = [
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 4 - Beta",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
@@ -31,7 +35,7 @@ dependencies = [
     "nougat-ocr>=0.1.17",
     "torch>=2.0.0",
     "torchvision>=0.15.0",
-    "transformers>=4.30.0",
+    "transformers>=4.30.0,<4.35.0",  # Pin to avoid cache_position incompatibility with nougat
     "ebooklib>=0.18",
     "Pillow>=10.0.0",
     "markdown>=3.4.0",
@@ -46,16 +50,20 @@ dependencies = [
 dev = [
     "pytest>=7.4.0",
     "pytest-cov>=4.1.0",
+    "pytest-mock>=3.12.0",
     "black>=23.0.0",
     "ruff>=0.1.0",
     "mypy>=1.5.0",
+    "types-Pillow",
+    "types-Markdown",
 ]
 
 [project.urls]
-Homepage = "https://github.com/yourusername/paper2epub"
-Documentation = "https://github.com/yourusername/paper2epub#readme"
-Repository = "https://github.com/yourusername/paper2epub"
-Issues = "https://github.com/yourusername/paper2epub/issues"
+Homepage = "https://github.com/MAXNORM8650/paper2epub"
+Documentation = "https://github.com/MAXNORM8650/paper2epub#readme"
+Repository = "https://github.com/MAXNORM8650/paper2epub"
+Issues = "https://github.com/MAXNORM8650/paper2epub/issues"
+Changelog = "https://github.com/MAXNORM8650/paper2epub/blob/main/CHANGELOG.md"
 
 [project.scripts]
 paper2epub = "paper2epub.cli:main"
@@ -66,14 +74,24 @@ include = ["paper2epub*"]
 
 [tool.black]
 line-length = 100
-target-version = ['py39']
+target-version = ['py38']
 
 [tool.ruff]
 line-length = 100
-target-version = "py39"
+target-version = "py38"
 
 [tool.mypy]
-python_version = "3.9"
+python_version = "3.8"
 warn_return_any = true
 warn_unused_configs = true
 disallow_untyped_defs = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+]
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]
