@@ -2,7 +2,6 @@
 Tests for CLI interface
 """
 
-import pytest
 from click.testing import CliRunner
 
 from paper2epub.cli import main

@@ -3,8 +3,6 @@ Tests for the converter module
 """
 
 import pytest
-from pathlib import Path
-from unittest.mock import Mock, patch
 
 from paper2epub.converter import Paper2EpubConverter
 

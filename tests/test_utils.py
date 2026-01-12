@@ -3,7 +3,6 @@ Tests for utility functions
 """
 
 import pytest
-from pathlib import Path
 
 from paper2epub.utils import (
     validate_pdf,

@@ -166,7 +166,7 @@ def main(
         )
 
         click.echo()
-        click.secho(f"✓ Conversion complete!", fg="green", bold=True)
+        click.secho("✓ Conversion complete!", fg="green", bold=True)
         click.echo(f"Output: {output_path}")
 
         if save_markdown:

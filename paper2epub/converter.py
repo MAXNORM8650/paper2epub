@@ -91,9 +91,7 @@ class Paper2EpubConverter:
             logger.info(f"Nougat model '{self.model_tag}' loaded successfully")
         except ImportError as e:
             logger.error("Nougat not installed. Run: pip install nougat-ocr")
-            raise ImportError(
-                "nougat-ocr is required. Install with: pip install nougat-ocr"
-            ) from e
+            raise ImportError("nougat-ocr is required. Install with: pip install nougat-ocr") from e
         except Exception as e:
             logger.error(f"Failed to load Nougat model: {e}")
             raise
@@ -171,6 +169,7 @@ class Paper2EpubConverter:
                 except Exception as e:
                     logger.error(f"Failed to process page {idx + 1}: {e}")
                     import traceback
+
                     logger.debug(traceback.format_exc())
                     continue
 
@@ -205,7 +204,6 @@ class Paper2EpubConverter:
             images: Optional list of (filename, bytes) tuples for embedded images
         """
         import markdown
-        from markdown.extensions import tables, fenced_code, codehilite
 
         output_path = Path(output_path)
         logger.info(f"Creating EPUB: {output_path.name}")
@@ -220,11 +218,11 @@ class Paper2EpubConverter:
         # Convert markdown to HTML
         md = markdown.Markdown(
             extensions=[
-                'extra',
-                'codehilite',
-                'fenced_code',
-                'tables',
-                'nl2br',
+                "extra",
+                "codehilite",
+                "fenced_code",
+                "tables",
+                "nl2br",
             ]
         )
         html_content = md.convert(markdown_content)
@@ -384,10 +382,8 @@ class Paper2EpubConverter:
             try:
                 extracted_images = self.figure_extractor.extract_images(pdf_path)
                 if extracted_images:
-                    markdown_content, images = (
-                        self.figure_matcher.insert_images_into_markdown(
-                            markdown_content, extracted_images
-                        )
+                    markdown_content, images = self.figure_matcher.insert_images_into_markdown(
+                        markdown_content, extracted_images
                     )
                     logger.info(f"Integrated {len(images)} figures into document")
             except Exception as e:

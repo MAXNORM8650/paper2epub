@@ -6,7 +6,7 @@ import io
 import logging
 import re
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 import fitz  # PyMuPDF
 from PIL import Image
@@ -75,8 +75,7 @@ class FigureExtractor:
                     # Filter small images (icons, decorations)
                     if width < self.min_width or height < self.min_height:
                         logger.debug(
-                            f"Skipping small image on page {page_num + 1}: "
-                            f"{width}x{height}"
+                            f"Skipping small image on page {page_num + 1}: " f"{width}x{height}"
                         )
                         continue
 
@@ -103,8 +102,7 @@ class FigureExtractor:
 
                 except Exception as e:
                     logger.warning(
-                        f"Failed to extract image {img_index} from page "
-                        f"{page_num + 1}: {e}"
+                        f"Failed to extract image {img_index} from page " f"{page_num + 1}: {e}"
                     )
                     continue
 
@@ -142,9 +140,7 @@ class FigureMatcher:
     ]
 
     def __init__(self):
-        self.compiled_patterns = [
-            re.compile(p, re.IGNORECASE) for p in self.FIGURE_PATTERNS
-        ]
+        self.compiled_patterns = [re.compile(p, re.IGNORECASE) for p in self.FIGURE_PATTERNS]
 
     def find_figure_references(self, markdown: str) -> List[Dict[str, Any]]:
         """
@@ -227,8 +223,7 @@ class FigureMatcher:
             image_markdown = "\n\n## Figures\n\n"
             for ins in insertions:
                 image_markdown += (
-                    f"![Figure {ins['figure_num']}]"
-                    f"({image_path_prefix}{ins['filename']})\n\n"
+                    f"![Figure {ins['figure_num']}]" f"({image_path_prefix}{ins['filename']})\n\n"
                 )
 
             modified_markdown = markdown + image_markdown

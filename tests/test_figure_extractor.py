@@ -5,7 +5,6 @@ Tests for figure extraction module
 import io
 from unittest.mock import MagicMock, Mock, patch
 
-import pytest
 from PIL import Image
 
 from paper2epub.figure_extractor import FigureExtractor, FigureMatcher
