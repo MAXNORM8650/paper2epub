@@ -39,16 +39,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install test dependencies (without heavy ML packages)
+      - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
+          # Install CPU-only torch first (smaller, ~200MB vs ~2GB)
+          pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+          # Install remaining dependencies (torch already satisfied, won't re-download)
           pip install pytest pytest-cov pytest-mock
-          pip install ebooklib Pillow markdown click tqdm pymupdf
-          pip install opencv-python-headless
-          pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install transformers
-          pip install nougat-ocr --no-deps
-          pip install -e . --no-deps
+          pip install -e ".[dev]"
 
       - name: Run tests (excluding slow and integration)
         run: |
