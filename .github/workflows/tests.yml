@@ -44,6 +44,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install pytest pytest-cov pytest-mock
           pip install ebooklib Pillow markdown click tqdm pymupdf
+          pip install opencv-python-headless
           pip install torch --index-url https://download.pytorch.org/whl/cpu
           pip install transformers
           pip install nougat-ocr --no-deps
